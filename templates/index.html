@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image to Text Converter</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: teal;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .img-preview {
+            max-width: 100%;
+            max-height: 300px;
+        }
+        .text-output {
+            background-color: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 class="text-center">Image to Text Converters</h1>
+
+        <div class="row">
+            <div class="col-md-6">
+                <label for="file" class="btn btn-primary btn-block">Choose Image</label>
+                <input id="file" type="file" style="display: none;">
+            </div>
+            <div class="col-md-6">
+                <button id="openCameraBtn" class="btn btn-primary btn-block">Open Camera</button>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12 text-center">
+                <video id="previewVideo" class="img-preview" style="display: none;"></video>
+                <p id="previewText">No image selected</p>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <h2>Extracted Text:</h2>
+                <p id="extractedText">Text will appear here...</p>
+            </div>
+        </div>
+
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <button id="captureBtn" class="btn btn-primary btn-block" style="display: none;">Capture Image</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let videoStream;
+        let videoElement;
+
+        document.getElementById('file').addEventListener('change', function () {
+            const file = this.files[0];
+            const formData = new FormData();
+            formData.append('image', file);
+
+            fetch('/capture_text', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('extractedText').innerText = data.text;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
+        document.getElementById('openCameraBtn').addEventListener('click', function () {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(stream => {
+                    videoStream = stream;
+                    videoElement = document.createElement('video');
+                    videoElement.srcObject = stream;
+                    videoElement.autoplay = true;
+                    videoElement.classList.add('img-preview');
+                    document.getElementById('previewText').innerText = 'Camera Preview';
+                    document.getElementById('previewVideo').replaceWith(videoElement);
+                    document.getElementById('captureBtn').style.display = 'block';
+                })
+                .catch(err => {
+                    console.error('Error accessing the camera:', err);
+                });
+        });
+
+        document.getElementById('captureBtn').addEventListener('click', function () {
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = videoElement.videoWidth;
+            canvas.height = videoElement.videoHeight;
+            context.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+            const imgDataUrl = canvas.toDataURL('image/png');
+
+            fetch('/capture_text', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imgDataUrl })
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('extractedText').innerText = data.text;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    </script>
+</body>
+</html>
