@@ -1,1 +1,1 @@
-# Expense-Tracker
+# Image to text converter
