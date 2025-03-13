@@ -9,7 +9,7 @@ from pytesseract import pytesseract
 # Set the path to the Tesseract executable
 pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
 
-app = Flask(__name__)
+app = Flask(__name__)  # Corrected this line
 
 def preprocess_image(image):
     """ Convert image to grayscale, blur, and apply thresholding """
@@ -46,5 +46,5 @@ def capture_text():
 
     return jsonify({'text': extracted_text})
 
-if __name__ == '__main__':
+if __name__ == '__main__':  # Corrected this line
     app.run(debug=True)
