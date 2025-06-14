@@ -1,20 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Image to Text Converter</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
     <style>
         body {
-            background-image: url("theme.jpg");
+            background-image: url("{{ url_for('static', filename='theme.jpg') }}");
             background-size: cover;
             font-family: Arial, sans-serif;
-        }
-        
+        } 
         .container {
             max-width: 800px;
             margin: 50px auto;
@@ -27,6 +22,17 @@
             max-width: 100%;
             max-height: 300px;
         }
+        .container-fluid {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .text-center {
+            font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
+            color: #49025b;
+            font-size: 40px;
+        }
         .text-output {
             background-color: #f5f5f5;
             padding: 10px;
@@ -34,39 +40,140 @@
         }
     </style>
 </head>
-
 <body>
-    <nav class="navbar navbar-expand-lg">
-        <div class="container-fluid">
-            <img src="logo2.png" class="rounded-circle" width="100" height="100"/>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="#">Home</a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Text Extract
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#">Camera</a></li>
-                            <li><a class="dropdown-item" href="#">Gallery</a></li>
-                            <li><hr class="dropdown-divider"></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link disabled" aria-disabled="true">Disabled</a>
-                    </li>
-                </ul>
-                <form class="d-flex" role="search">
-                    <input class="form-control me-2" type="search" placeholder="Search" aria-label="Search">
-                    <button class="btn btn-outline-success" type="submit">Search</button>
-                </form>
-            </div>
+<br><br>
+<h2 class="text-center">IMAGE TO TEXT CONVERTER</h2>
+<br><br><br>
+<div>
+    <p class="text-center">Upload an image or use your camera to extract text from it.</p>
+</div>
+<br><br><br>
+<!-- Upload Section -->
+<div class="text-center">
+    <div class="d-flex justify-content-center align-items-center gap-4">
+        <div class="d-flex flex-column align-items-center me-5">
+            <label for="imageInput" style="cursor:pointer; margin-bottom:0;" onclick="uploadImage()">
+                <img src="{{ url_for('static', filename='gallery.png') }}" alt="Upload Image" width="94" height="94">
+            </label>
+            <span style="font-size: 30px; color: #49025b;">Upload Image</span>
+            
         </div>
-    </nav>
+        <div class="d-flex flex-column align-items-center me-5">
+            <button onclick="enableCameraMode()" style="background: transparent; border: #49025b; padding: 5px;;">
+                <img src="{{ url_for('static', filename='camera2.png') }}" alt="Open Camera" width="84" height="84">
+            </button>
+            <span style="font-size: 30px; color: #49025b;">Use Camera</span>
+        </div>
+    </div>
+
+<br>
+
+<!-- Image Preview -->
+<div id="previewContainer" class="text-center">
+    <img id="preview" class="img-preview" style="display:none;" />
+    <input type="file" id="imageInput" accept="image/*" style="display:none;">
+    <button id="extractBtn" class="btn mt-2" style="display:none; background-color: #49025b; color: #fff; border: 1px solid #49025b;" onclick="uploadImage()">Extract Text</button>
+</div>
+
+<br>
+
+<!-- Camera Section -->
+<div class="text-center">
+
+    <div id="cameraOptions" style="display: none;">
+        <video id="cameraStream" width="300" height="240" autoplay></video>
+        <canvas id="snapshotCanvas" width="300" height="240" style="display:none;"></canvas>
+        <br>
+        <button id="captureBtn" class="btn mt-2" style="background-color: #49025b; color: #fff; border: 1px solid #49025b;" onclick="captureFromCamera()">Capture & Extract</button>
+    </div>
+</div>
+
+<br>
+
+<!-- Output Section -->
+<div id="output" class="text-output text-center"></div>
+
+<!-- Script Section -->
+<script>
+    const imageInput = document.getElementById('imageInput');
+    const preview = document.getElementById('preview');
+    let video = document.getElementById('cameraStream');
+    let canvas = document.getElementById('snapshotCanvas');
+    let context = canvas.getContext('2d');
+    let stream;
+
+    imageInput.addEventListener('change', () => {
+        const file = imageInput.files[0];
+        if (file) {
+            preview.src = URL.createObjectURL(file);
+            preview.style.display = 'block';
+            document.getElementById('extractBtn').style.display = 'inline-block';
+        } else {
+            preview.style.display = 'none';
+            document.getElementById('extractBtn').style.display = 'none';
+        }
+    });
+
+    function uploadImage() {
+        const file = imageInput.files[0];
+        if (!file) {
+            alert("Please select an image.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        fetch("/capture_text", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("output").innerText = data.text || "No text detected.";
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Failed to extract text.");
+        });
+    }
+
+    function enableCameraMode() {
+        document.getElementById('cameraOptions').style.display = 'block';
+        startCamera();
+    }
+
+    function startCamera() {
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(s => {
+                stream = s;
+                video.srcObject = stream;
+            })
+            .catch(err => alert("Camera not accessible: " + err));
+    }
+
+    function captureFromCamera() {
+        if (!stream) {
+            alert("Camera not started.");
+            return;
+        }
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const base64Image = canvas.toDataURL("image/jpeg");
+
+        fetch("/capture_text", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64Image })
+        })
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("output").innerText = data.text || "No text detected.";
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert("Text extraction failed.");
+        });
+    }
+</script>
 </body>
 </html>
