@@ -8,18 +8,17 @@ from pytesseract import pytesseract
 
 pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-
 app = Flask(__name__)
 
 def preprocess_image(image):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
-    return thresh
+    # Optional: Uncomment to apply thresholding
+    # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+    # thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    return gray
 
 def recognize_text(image):
-    text = pytesseract.image_to_string(Image.fromarray(image), config='--psm 6')
-    return text.strip()
+    return pytesseract.image_to_string(Image.fromarray(image), config='--psm 6').strip()
 
 @app.route('/')
 def index():
@@ -27,18 +26,23 @@ def index():
 
 @app.route('/capture_text', methods=['POST'])
 def capture_text():
-    if 'image' not in request.files:
-        return jsonify({'error': 'No image provided'}), 400
+    if 'image' in request.files:
+        file = request.files['image']
+        image = Image.open(file.stream)
+    else:
+        try:
+            data = request.get_json()
+            base64_image = data['image'].split(',')[1]
+            image_data = base64.b64decode(base64_image)
+            image = Image.open(BytesIO(image_data))
+        except Exception:
+            return jsonify({'error': 'Invalid image data'}), 400
 
-    file = request.files['image']
-    image = Image.open(file.stream)
     image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-
     processed_image = preprocess_image(image)
     extracted_text = recognize_text(processed_image)
 
     return jsonify({'text': extracted_text})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-
+    app.run(debug=True)
