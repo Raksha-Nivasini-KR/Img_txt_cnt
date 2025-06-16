@@ -5,8 +5,12 @@ from PIL import Image
 from io import BytesIO
 import base64
 from pytesseract import pytesseract
+import easyocr
 
-pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
+pytesseract.tesseract_cmd = r"C:\Tesseract\tesseract.exe"  # Update this path to your Tesseract installation
+
+# For improved OCR accuracy, use EasyOCR (install with: pip install easyocr)
+reader = easyocr.Reader(['en'])
 
 app = Flask(__name__)
 
@@ -18,7 +22,12 @@ def preprocess_image(image):
     return gray
 
 def recognize_text(image):
-    return pytesseract.image_to_string(Image.fromarray(image), config='--psm 6').strip()
+    # Convert image back to RGB for EasyOCR
+    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+    result = reader.readtext(rgb_image)
+    extracted_text = " ".join([text[1] for text in result])
+    return extracted_text.strip()
+
 
 @app.route('/')
 def index():
