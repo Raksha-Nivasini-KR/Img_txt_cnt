@@ -1,4 +1,6 @@
 Flask
-opencv-python
-Pillow
-pytesseract
+numpy
+pillow
+easyocr
+torch
+opencv-python-headless
