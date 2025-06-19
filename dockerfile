@@ -1,11 +1,13 @@
-# Build the image
-docker build -t image-to-text-app .
+FROM python:3.11-slim
 
-# Run the container
-docker run -p 5000:5000 image-to-text-app
+RUN apt-get update && \
+    apt-get install -y tesseract-ocr libgl1 libglib2.0-0 && \
+    rm -rf /var/lib/apt/lists/*
 
-# (Optional) Check running containers
-docker ps
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# (Optional) Stop a running container
-docker stop <container_id>
+COPY . .
+
+CMD ["flask", "run", "--host=0.0.0.0"]
