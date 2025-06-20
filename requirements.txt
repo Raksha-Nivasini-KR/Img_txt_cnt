@@ -1,7 +1,14 @@
-Flask==2.3.3
-opencv-python-headless==4.10.0.82
-numpy==1.26.4
-Pillow==10.3.0
+# Extra index so CPU wheels for torch/torchvision are fetched
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch==2.0.1+cpu
+torchvision==0.15.2+cpu
+
 easyocr==1.7.1
-torch==2.3.0
-torchvision==0.18.0
+Flask==3.0.3
+Pillow==10.3.0
+numpy==1.26.4
+opencv-python-headless==4.9.0.80
+
+# For production WSGI (optional, but recommended by PaaS like Railway)
+gunicorn==22.0.0
