@@ -1,20 +1,20 @@
-# Use small base image
 FROM python:3.11-alpine
 
 # Set working directory
 WORKDIR /app
 
-# Copy only the requirements first to leverage Docker caching
-COPY requirements.txt .
+# Install necessary build tools for numpy
+RUN apk add --no-cache gcc g++ musl-dev libffi-dev
 
-# Install dependencies (without cache)
+# Copy requirements and install Python packages
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the entire app
+# Copy rest of the app
 COPY . .
 
-# Expose the port Flask runs on
+# Expose port
 EXPOSE 5000
 
-# Run the app
+# Run app
 CMD ["python", "app.py"]
