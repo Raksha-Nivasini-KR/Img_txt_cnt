@@ -1,60 +1,84 @@
+# app.py
 from flask import Flask, request, jsonify, render_template
-import cv2
+import cv2                      # use opencv-python-headless in requirements
 import numpy as np
 from PIL import Image
 from io import BytesIO
 import base64
 import easyocr
-import gc  # for memory cleanup
+import gc                       # for memory cleanup
+import os
 
-app = Flask(__name__)
+app = Flask(_name_)
 
-def preprocess_image(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    # Optional: Apply thresholding for better results
+# ----------- Helpers --------------------------------------------------------- #
+def preprocess_image(bgr_img: np.ndarray) -> np.ndarray:
+    """
+    Minimal pre-processing: convert to gray and (optionally) threshold.
+    Keep it lightweight; OCR still receives a 3-channel image.
+    """
+    gray = cv2.cvtColor(bgr_img, cv2.COLOR_BGR2GRAY)
+
+    # # Optional extra cleaning:
     # blurred = cv2.GaussianBlur(gray, (5, 5), 0)
-    # thresh = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+    # gray = cv2.threshold(blurred, 0, 255,
+    #                      cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+
     return gray
 
-def recognize_text(image):
-    # Initialize EasyOCR reader inside the function to save memory
-    reader = easyocr.Reader(['en'], gpu=False)  # GPU off for most hosting platforms
-    rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-    result = reader.readtext(rgb_image)
-    extracted_text = " ".join([text[1] for text in result])
 
-    # Clean up memory
+def recognize_text(img: np.ndarray) -> str:
+    """
+    Run EasyOCR once per request (lazy-loaded to save cold-start RAM).
+    Works on both gray or BGR images.
+    """
+    # Convert to RGB (EasyOCR expects RGB)
+    if len(img.shape) == 2:                       # grayscale
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    else:                                         # BGR
+        rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+    reader = easyocr.Reader(['en'], gpu=False)    # CPU-only, single lang
+    result = reader.readtext(rgb_img)
+    text = " ".join([t[1] for t in result]).strip()
+
+    # Explicit cleanup (important on small-memory dynos)
     del reader
     gc.collect()
 
-    return extracted_text.strip()
+    return text
+# ----------------------------------------------------------------------------- #
+
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+
 @app.route('/capture_text', methods=['POST'])
 def capture_text():
     try:
+        # ---- 1. Decode the incoming image (file upload OR base64 JSON) ---- #
         if 'image' in request.files:
-            file = request.files['image']
-            image = Image.open(file.stream)
+            img_file = request.files['image']
+            img = Image.open(img_file.stream)
         else:
-            data = request.get_json()
-            base64_image = data['image'].split(',')[1]
-            image_data = base64.b64decode(base64_image)
-            image = Image.open(BytesIO(image_data))
+            data = request.get_json(force=True)
+            b64 = data['image'].split(',')[1]     # strip data URI prefix
+            img = Image.open(BytesIO(base64.b64decode(b64)))
 
-        image = cv2.cvtColor(np.array(image), cv2.COLOR_RGB2BGR)
-        processed_image = preprocess_image(image)
-        extracted_text = recognize_text(processed_image)
+        bgr_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
 
-        return jsonify({'text': extracted_text})
+        # ---- 2. OCR pipeline ---- #
+        gray = preprocess_image(bgr_img)
+        extracted = recognize_text(gray)
 
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+        return jsonify({'text': extracted})
 
-if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 8080))  # Railway uses PORT env
-    app.run(host='0.0.0.0', port=port)
+    except Exception as err:
+        return jsonify({'error': str(err)}), 400
+
+
+if _name_ == '_main_':
+    PORT = int(os.environ.get("PORT", 8080))      # Railway/Render default
+    app.run(host='0.0.0.0', port=PORT)
