@@ -9,7 +9,7 @@ import easyocr
 import gc                       # for memory cleanup
 import os
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 # ----------- Helpers --------------------------------------------------------- #
 def preprocess_image(bgr_img: np.ndarray) -> np.ndarray:
