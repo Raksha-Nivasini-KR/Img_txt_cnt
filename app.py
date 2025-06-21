@@ -58,25 +58,30 @@ def index():
 @app.route('/capture_text', methods=['POST'])
 def capture_text():
     try:
-        # ---- 1. Decode the incoming image (file upload OR base64 JSON) ---- #
         if 'image' in request.files:
             img_file = request.files['image']
+            print("📷 Image received via file upload")  # ✅ LOG
             img = Image.open(img_file.stream)
         else:
             data = request.get_json(force=True)
-            b64 = data['image'].split(',')[1]     # strip data URI prefix
+            print("📦 Received base64 payload")          # ✅ LOG
+            b64 = data['image'].split(',')[1]
             img = Image.open(BytesIO(base64.b64decode(b64)))
 
-        bgr_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+        print(f"🖼️ Image size: {img.size}, mode: {img.mode}")  # ✅ LOG
 
-        # ---- 2. OCR pipeline ---- #
+        bgr_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
         gray = preprocess_image(bgr_img)
         extracted = recognize_text(gray)
+
+        print("📄 OCR extracted text:", extracted)  # ✅ LOG
 
         return jsonify({'text': extracted})
 
     except Exception as err:
-        return jsonify({'error': str(err)}), 400
+        print(f"❌ Error during OCR: {err}")         # ✅ LOG
+        return jsonify({'error': f"Internal server error: {str(err)}"}), 400
+
 
 if __name__ == '__main__':
     print("✅ Flask app is starting...")  # Debug message
