@@ -38,9 +38,10 @@ def recognize_text(img: np.ndarray) -> str:
     else:                                         # BGR
         rgb_img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    reader = easyocr.Reader(['en'], gpu=False)    # CPU-only, single lang
-    result = reader.readtext(rgb_img)
-    text = " ".join([t[1] for t in result]).strip()
+    reader = easyocr.Reader(['en'], gpu=False)
+    result = reader.readtext(rgb_img, detail=0, paragraph=True)
+    text = " ".join(result).strip()
+
 
     # Explicit cleanup (important on small-memory dynos)
     del reader
