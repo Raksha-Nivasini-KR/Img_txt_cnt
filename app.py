@@ -78,7 +78,7 @@ def capture_text():
     except Exception as err:
         return jsonify({'error': str(err)}), 400
 
-
 if __name__ == '__main__':
-    PORT = int(os.environ.get("PORT", 8080))
-    app.run(host='0.0.0.0', port=PORT)
+    print("✅ Flask app is starting...")  # Debug message
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
