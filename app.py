@@ -79,6 +79,6 @@ def capture_text():
         return jsonify({'error': str(err)}), 400
 
 
-if __name__ == '_main_':
-    PORT = int(os.environ.get("PORT", 8080))      # Railway/Render default
+if __name__ == '__main__':
+    PORT = int(os.environ.get("PORT", 8080))
     app.run(host='0.0.0.0', port=PORT)
