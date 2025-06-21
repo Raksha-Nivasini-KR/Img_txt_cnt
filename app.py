@@ -58,29 +58,41 @@ def index():
 @app.route('/capture_text', methods=['POST'])
 def capture_text():
     try:
+        # --- Step 1: Load the image from file or base64 ---
         if 'image' in request.files:
             img_file = request.files['image']
-            print("📷 Image received via file upload")  # ✅ LOG
+            print("📷 Image received via file upload")
             img = Image.open(img_file.stream)
         else:
             data = request.get_json(force=True)
-            print("📦 Received base64 payload")          # ✅ LOG
+            print("📦 Received base64 payload")
             b64 = data['image'].split(',')[1]
             img = Image.open(BytesIO(base64.b64decode(b64)))
 
-        print(f"🖼️ Image size: {img.size}, mode: {img.mode}")  # ✅ LOG
+        img = img.convert("RGB")  # Ensure consistent format
+        print(f"🖼️ Original image size: {img.size}, mode: {img.mode}")
 
+        # --- Step 2: Resize if the image is too large ---
+        MAX_DIM = 1024  # You can tweak this value
+        if max(img.size) > MAX_DIM:
+            img.thumbnail((MAX_DIM, MAX_DIM), Image.LANCZOS)
+            print(f"🔄 Resized image to: {img.size}")
+
+        # --- Step 3: Convert to OpenCV format ---
         bgr_img = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+        # --- Step 4: OCR Pipeline ---
         gray = preprocess_image(bgr_img)
         extracted = recognize_text(gray)
 
-        print("📄 OCR extracted text:", extracted)  # ✅ LOG
+        print("📄 OCR extracted text:", extracted)
 
         return jsonify({'text': extracted})
 
     except Exception as err:
-        print(f"❌ Error during OCR: {err}")         # ✅ LOG
+        print(f"❌ Error during OCR: {err}")
         return jsonify({'error': f"Internal server error: {str(err)}"}), 400
+
 
 
 if __name__ == '__main__':
